@@ -18,6 +18,27 @@ Raspberry Pi [recommends full-upgrade](https://www.raspberrypi.com/documentation
 
 ## Configure services
 
+### Certificate helper
+
+`certs.sh` is tracked and transferred by `deploy-pi.sh`. Full setup and the
+RADIUS/RadSec-only modes install it as `/etc/certs.sh` (mode 750), backing up
+an existing different script. Installation does not generate certificates.
+
+Run it separately when ready for the interactive OpenSSL prompts:
+
+```bash
+sudo /etc/certs.sh
+# Optional: choose an explicit output directory.
+sudo /etc/certs.sh /etc/radsecproxy/certs
+```
+
+The installed default output is `/etc/pi-set-go/certs`. When run from the
+repository, the default is ignored `config/certs/`. Files are created with a
+private umask, and existing nonempty keys/certificates are preserved. Configure
+the service certificate paths and access permissions for your deployment.
+The helper retains its test CA/server certificate workflow, with an encrypted
+CA key and optional encrypted server key (`ENCRYPTED=1`), and now stops on errors.
+
 ### Headless boot, swap, and remote access
 
 The full setup also runs `setup-remote.sh`. It can be run independently:

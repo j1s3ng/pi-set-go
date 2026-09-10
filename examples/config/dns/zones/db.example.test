@@ -1,3 +1,0 @@
-; Example placeholder for a forward DNS zone file.
-; Add real forward and reverse zone files under config/dns/zones/.
-; This file is a layout example, not a valid zone ready for deployment.
