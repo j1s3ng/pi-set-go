@@ -37,8 +37,8 @@ class DeploymentTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 radsec.read_config(source)
 
-    def run_deployment(self, fail_at=None):
-        with tempfile.TemporaryDirectory() as folder, redirect_stdout(io.StringIO()):
+    def run_deployment(self, fail_at=None, require_valid=True):
+        with tempfile.TemporaryDirectory() as folder, redirect_stdout(io.StringIO()) as output:
             root = Path(folder)
             source, target = root / 'source', root / 'radsecproxy.conf'
             source.write_text('client new {\n type UDP\n}\n')
@@ -51,17 +51,22 @@ class DeploymentTests(unittest.TestCase):
                 calls.append(command)
                 if not failed and fail_at and fail_at in command:
                     failed = True
+                    if not kwargs.get('check', False):
+                        return subprocess.CompletedProcess(command, 1)
                     raise subprocess.CalledProcessError(1, command)
                 return subprocess.CompletedProcess(command, 0)
 
             with patch.object(radsec.subprocess, 'check_output', side_effect=['root', '']), \
                  patch.object(radsec.os, 'chown'), patch.object(radsec.subprocess, 'run', side_effect=run):
-                if fail_at:
+                if fail_at and (fail_at != '-p' or require_valid):
                     with self.assertRaises(subprocess.CalledProcessError):
-                        radsec.deploy(source, target, root)
+                        radsec.deploy(source, target, root, require_valid=require_valid)
                     self.assertEqual(target.read_text(), '# original config\n')
                 else:
-                    radsec.deploy(source, target, root)
+                    validated = radsec.deploy(source, target, root, require_valid=require_valid)
+                    self.assertEqual(validated, fail_at is None)
+                    if fail_at:
+                        self.assertIn('Validation pending', output.getvalue())
                     self.assertEqual(target.read_bytes(), source.read_bytes())
                     self.assertEqual(target.stat().st_mode & 0o777, 0o640)
                     self.assertIn(['systemctl', 'disable', '--now', 'radsecproxy'], calls)
@@ -76,6 +81,9 @@ class DeploymentTests(unittest.TestCase):
 
     def test_failed_stop_keeps_installed_file(self):
         self.run_deployment('disable')
+
+    def test_missing_certificates_can_be_provisioned_later(self):
+        self.run_deployment('-p', require_valid=False)
 
     def test_private_archive_and_exclusions(self):
         with tempfile.TemporaryDirectory() as folder:

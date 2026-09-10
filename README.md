@@ -150,11 +150,17 @@ sudo ./pi-set-go.sh --radsec-only
 ```
 
 The deployer requires an actual local configuration; missing or comment-only
-files fail clearly. It backs up the installed file, validates a staged copy
-with `radsecproxy -p`, and installs it with mode 640 and service-group access.
+files fail clearly. It backs up the installed file, attempts validation with
+`radsecproxy -p`, and installs it with mode 640 and service-group access.
 **radsecproxy stays stopped and disabled**, including in `--radsec-only` mode.
 FreeRADIUS is the preferred service and keeps UDP 1812/1813. Listener settings
-are preserved. On validation failure the installed file is untouched. Backups and
+are preserved. If validation fails (for example, certificates have not yet been
+generated), the config is installed for later provisioning and setup reports
+**validation pending** without aborting. The proxy must remain disabled until
+you resolve all errors and validate it. For strict deployment that retains the
+old file on validation failure, use
+`sudo python3 scripts/configure-radsecproxy.py config/radsecproxy.conf --require-valid`.
+Backups and
 potentially sensitive validation logs stay in a private
 `/var/backups/pi-set-go-radsec-*` directory. Referenced certificates, keys, and
 included files must already exist at the paths used in your configuration.

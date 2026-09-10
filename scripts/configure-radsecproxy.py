@@ -19,7 +19,7 @@ def read_config(source):
     return content
 
 
-def deploy(source, destination=Path('/etc/radsecproxy.conf'), backup_root=Path('/var/backups')):
+def deploy(source, destination=Path('/etc/radsecproxy.conf'), backup_root=Path('/var/backups'), require_valid=False):
     content = read_config(source)
     if destination.is_symlink():
         raise ValueError('Destination is a symlink; review its target before deployment.')
@@ -41,8 +41,10 @@ def deploy(source, destination=Path('/etc/radsecproxy.conf'), backup_root=Path('
         os.chown(staged, 0, gid)
         staged.chmod(0o640)
         with (backup / 'validation.log').open('w') as log:
-            subprocess.run(['radsecproxy', '-p', '-c', str(staged)], cwd=destination.parent,
-                           stdout=log, stderr=subprocess.STDOUT, check=True)
+            validation = subprocess.run(['radsecproxy', '-p', '-c', str(staged)], cwd=destination.parent,
+                                        stdout=log, stderr=subprocess.STDOUT, check=False)
+        if require_valid:
+            validation.check_returncode()
         os.replace(staged, destination)
     except Exception:
         print(f'Deployment failed; previous configuration retained. Inspect {backup}/validation.log.')
@@ -51,18 +53,25 @@ def deploy(source, destination=Path('/etc/radsecproxy.conf'), backup_root=Path('
         if staged.exists():
             staged.unlink()
     print(f'Deployed {source} to {destination}; radsecproxy remains stopped and disabled. FreeRADIUS is the default service.')
+    if validation.returncode:
+        print(f'Validation pending: radsecproxy is not ready to enable. See {backup}/validation.log.')
+        print('After provisioning certificates and other dependencies, run: sudo radsecproxy -p -c /etc/radsecproxy.conf')
+    else:
+        print('Radsecproxy configuration validation passed; service activation remains manual.')
+    return validation.returncode == 0
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
+    parser.add_argument('--require-valid', action='store_true', help='Reject an invalid config instead of installing it for later provisioning')
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error('Run with sudo.')
     if not shutil.which('radsecproxy'):
         parser.error('radsecproxy is not installed. Run the full setup first or install the package.')
     try:
-        deploy(args.source)
+        deploy(args.source, require_valid=args.require_valid)
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
         parser.error(str(error))
 
