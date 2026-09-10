@@ -1,0 +1,8 @@
+; Layout example only. The script detects the real Ethernet IP on the Pi.
+$TTL 300
+@ IN SOA ns1.super.local. hostmaster.super.local. (
+    1 ; serial
+    3600 900 604800 300 )
+@   IN NS ns1.super.local.
+@   IN A 192.0.2.10
+ns1 IN A 192.0.2.10

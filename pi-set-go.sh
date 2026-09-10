@@ -5,7 +5,8 @@ trap 'printf "pi-set-go: failed at line %s (exit %s).\n" "$LINENO" "$?" >&2' ERR
 
 usage() {
   cat <<'EOF'
-Usage: sudo ./pi-set-go.sh [--yes] [--dry-run] [--radius-only]
+Usage: sudo ./pi-set-go.sh [--yes] [--dry-run] [--radius-only | --dns-only]
+                          [--dns-interface=NAME]
 
 Update APT, fully upgrade installed packages, then install FreeRADIUS,
 radsecproxy, and BIND9 with their command-line utilities.
@@ -14,6 +15,8 @@ Configure FreeRADIUS PEAP/MSCHAPv2 with dynamic VLAN reply support.
   -y, --yes    Accept APT prompts; preserve existing package config files.
   --dry-run    Print commands without changing the system (no sudo needed).
   --radius-only Configure installed FreeRADIUS without running APT.
+  --dns-only   Configure installed BIND9 without APT or FreeRADIUS changes.
+  --dns-interface=NAME Select an Ethernet interface instead of auto-detection.
   -h, --help   Show this help.
 EOF
 }
@@ -21,16 +24,24 @@ EOF
 assume_yes=false
 dry_run=false
 radius_only=false
+dns_only=false
+dns_args=(--interface "")
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 for arg in "$@"; do
   case "$arg" in
     -y|--yes) assume_yes=true ;;
     --dry-run) dry_run=true ;;
     --radius-only) radius_only=true ;;
+    --dns-only) dns_only=true ;;
+    --dns-interface=*) dns_args=(--interface "${arg#*=}") ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$arg" >&2; usage >&2; exit 2 ;;
   esac
 done
+if "$radius_only" && "$dns_only"; then
+  printf 'Choose only one of --radius-only and --dns-only.\n' >&2
+  exit 2
+fi
 
 if ! "$dry_run"; then
   if [[ "$(uname -s)" != Linux || ! -r /etc/os-release ]]; then
@@ -62,19 +73,24 @@ if "$assume_yes"; then
   apt_options+=(-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 fi
 
-if ! "$radius_only"; then
+if ! "$radius_only" && ! "$dns_only"; then
 run apt-get "${apt_options[@]}" -o APT::Update::Error-Mode=any update
 # dist-upgrade is apt-get's equivalent of apt full-upgrade.
 run apt-get "${apt_options[@]}" dist-upgrade
-run apt-get "${apt_options[@]}" install freeradius freeradius-utils radsecproxy bind9 bind9-utils dnsutils python3
+run apt-get "${apt_options[@]}" install freeradius freeradius-utils radsecproxy bind9 bind9-utils dnsutils python3 iproute2
 fi
+if ! "$dns_only"; then
 run python3 "$script_dir/scripts/configure-radius.py" "$script_dir/config/freeradius/users"
+fi
+if ! "$radius_only"; then
+run python3 "$script_dir/scripts/configure-dns.py" "$script_dir/config/dns" "${dns_args[@]}"
+fi
 
 if "$dry_run"; then
   printf 'Preview complete; no changes made.\n'
 else
   run dpkg-query -W '-f=${binary:Package}\t${Status}\t${Version}\n' freeradius radsecproxy bind9
-  printf '\nInstallation complete. Configure RADIUS clients, RadSec TLS/peers, and DNS zones before use.\n'
+  printf '\nSetup complete. Configure RADIUS clients, RadSec TLS/peers, and client DNS settings before use.\n'
   printf 'Package installers may start services with their packaged defaults.\n'
   if [[ -f /var/run/reboot-required ]]; then
     printf 'A reboot is required. Reboot when ready with: sudo reboot\n'

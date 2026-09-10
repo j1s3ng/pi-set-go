@@ -38,18 +38,63 @@ config/                       # Everything here is ignored
 └── dns/
     ├── named.conf.local
     ├── named.conf.options
+    ├── zones.list
     └── zones/
-        └── db.example.test
+        └── db.super.local
 ```
 
 These are placeholders showing file locations, not working service configurations.
 The setup script installs `config/freeradius/users` into
 `/etc/freeradius/3.0/mods-config/files/authorize` when it contains active entries,
 replacing that server file after backing it up. Comment-only files preserve the
-existing server users. DNS and radsecproxy files are not automatically deployed.
+existing server users. DNS is generated and deployed as described below;
+radsecproxy files are not automatically deployed.
 
 Package installers may start services automatically. The script validates and
-restarts FreeRADIUS after configuration; it does not automatically reboot.
+restarts FreeRADIUS and BIND9 after configuration; it does not automatically reboot.
+
+### DNS from the Ethernet address
+
+The normal setup also generates BIND9 DNS. To update DNS alone after an IP change:
+
+```bash
+sudo ./pi-set-go.sh --dns-only
+# Select an interface when the Pi has multiple Ethernet connections:
+sudo ./pi-set-go.sh --dns-only --dns-interface=enp1s0
+```
+
+Detection uses `ip -j -4 address show` (the structured form of `ip a`) and the
+default routes. It chooses an active physical Ethernet adapter, including USB
+Ethernet, excludes Wi-Fi and virtual adapters, and prefers the Ethernet default
+route. Ambiguous addresses fail with an explanation instead of guessing.
+The full install includes `iproute2` and Python 3 for this helper.
+
+`config/dns/zones.list` lists one domain per line. Without it, only `super.local`
+is generated. The tracked example contains only that domain; add private domains
+to the ignored local list. Each zone gets SOA/NS records and A records for its
+root name and `ns1`, pointing at the detected IPv4 address. Zone serials advance
+on reruns. No wildcard or reverse zones are generated.
+
+The helper preserves existing declarations in `/etc/bind/named.conf.local` and
+adds an include for `/etc/bind/pi-set-go/zones.conf`. It replaces
+`named.conf.options` with generated settings: listen on localhost and the
+Ethernet IP, answer authoritative queries from any client that can reach it,
+and allow recursion only from localhost and the detected Ethernet subnet.
+Routed VLAN clients can query the local zones; additional recursion subnets
+require editing the options. Settings regenerate on every DNS run.
+
+It backs up affected configuration in `/var/backups/pi-set-go-dns-*`, checks
+zones with `named-checkzone` and the whole configuration with `named-checkconf -z`,
+then restarts `named`. Failed deployment restores the changed files; inspect
+service status before restarting manually. Generated review copies are saved
+under ignored `config/dns/`. Duplicate existing zone declarations will fail
+validation and must be resolved before rerunning.
+
+Point clients/DHCP DNS settings at the Pi and allow TCP/UDP port 53 through your
+network. `.local` is reserved for [multicast DNS](https://www.rfc-editor.org/rfc/rfc6762.html);
+clients may need explicit unicast DNS routing for these zones. Test BIND directly
+with `dig @<PI_ETHERNET_IP> super.local A`. DNS is regenerated when the script
+runs, not automatically on DHCP renewals; a DHCP reservation keeps the IP stable.
 
 ### PEAP and dynamic VLANs
 

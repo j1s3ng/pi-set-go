@@ -1,0 +1,2 @@
+# One DNS zone per line. Copy to config/dns/zones.list and add private zones there.
+super.local
