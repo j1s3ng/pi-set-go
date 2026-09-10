@@ -5,23 +5,28 @@ trap 'printf "pi-set-go: failed at line %s (exit %s).\n" "$LINENO" "$?" >&2' ERR
 
 usage() {
   cat <<'EOF'
-Usage: sudo ./pi-set-go.sh [--yes] [--dry-run]
+Usage: sudo ./pi-set-go.sh [--yes] [--dry-run] [--radius-only]
 
 Update APT, fully upgrade installed packages, then install FreeRADIUS,
 radsecproxy, and BIND9 with their command-line utilities.
+Configure FreeRADIUS PEAP/MSCHAPv2 with dynamic VLAN reply support.
 
   -y, --yes    Accept APT prompts; preserve existing package config files.
   --dry-run    Print commands without changing the system (no sudo needed).
+  --radius-only Configure installed FreeRADIUS without running APT.
   -h, --help   Show this help.
 EOF
 }
 
 assume_yes=false
 dry_run=false
+radius_only=false
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 for arg in "$@"; do
   case "$arg" in
     -y|--yes) assume_yes=true ;;
     --dry-run) dry_run=true ;;
+    --radius-only) radius_only=true ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$arg" >&2; usage >&2; exit 2 ;;
   esac
@@ -57,10 +62,13 @@ if "$assume_yes"; then
   apt_options+=(-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 fi
 
+if ! "$radius_only"; then
 run apt-get "${apt_options[@]}" -o APT::Update::Error-Mode=any update
 # dist-upgrade is apt-get's equivalent of apt full-upgrade.
 run apt-get "${apt_options[@]}" dist-upgrade
-run apt-get "${apt_options[@]}" install freeradius freeradius-utils radsecproxy bind9 bind9-utils dnsutils
+run apt-get "${apt_options[@]}" install freeradius freeradius-utils radsecproxy bind9 bind9-utils dnsutils python3
+fi
+run python3 "$script_dir/scripts/configure-radius.py" "$script_dir/config/freeradius/users"
 
 if "$dry_run"; then
   printf 'Preview complete; no changes made.\n'

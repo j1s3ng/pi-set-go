@@ -1,3 +1,13 @@
 # Example placeholder only. Add real FreeRADIUS user entries to
 # config/freeradius/users, which is ignored by Git.
 # Do not put real usernames or passwords in this example folder.
+# Uncomment and customize entries ONLY in your ignored config/freeradius/users.
+# Repeat for VLANs 1-6 with your own passwords in the ignored file.
+# tvlan1 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     Tunnel-Type := VLAN,
+#     Tunnel-Medium-Type := IEEE-802,
+#     Tunnel-Private-Group-Id := "1"
+#
+# Airespace takes an interface NAME; match the controller's configured name.
+# avlan1 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     Airespace-Interface-Name := "1"

@@ -7,3 +7,4 @@
 
 # Local service configuration, credentials, certificates, and DNS data.
 /config/
+__pycache__/
