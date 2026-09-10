@@ -171,6 +171,21 @@ restarts FreeRADIUS and BIND9 after configuration; it does not automatically reb
 
 ### DNS from the Ethernet address
 
+DNS management is part of deployment. Edit the ignored local
+`config/dns/zones.list`, then run this **from your Mac**:
+
+```bash
+./deploy-pi.sh pi@192.168.21.130 --apply --dns-only
+# Optional: select the Pi's Ethernet interface explicitly.
+./deploy-pi.sh pi@192.168.21.130 --apply --dns-only --dns-interface=eth0
+```
+
+Deployment validates the local zone list before connecting, transfers it over
+SSH, and runs `manage-dns.sh` on the Pi. Full setup uses the same DNS command.
+Generated zones include commented `ise01`, `ise02`, and `ise03` FQDN records;
+their example IPs remain disabled until configured. Private domain names stay
+in the ignored zone list and generated files.
+
 For standalone DNS management, run this **on the Pi**:
 
 ```bash
@@ -203,8 +218,8 @@ Ethernet, excludes Wi-Fi and virtual adapters, and prefers the Ethernet default
 route. Ambiguous addresses fail with an explanation instead of guessing.
 The full install includes `iproute2` and Python 3 for this helper.
 
-`config/dns/zones.list` lists one domain per line. Without it, only `super.local`
-is generated. The tracked example contains only that domain; add private domains
+`config/dns/zones.list` lists one domain per line and is required. A missing or
+invalid list stops DNS deployment. The tracked example contains only `super.local`; add private domains
 to the ignored local list. Each zone gets SOA/NS records and A records for its
 root name and `ns1`, pointing at the detected IPv4 address. Zone serials advance
 on reruns. No wildcard or reverse zones are generated.

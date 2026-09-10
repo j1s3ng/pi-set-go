@@ -11,9 +11,11 @@ Usage: sudo ./manage-dns.sh [--interface NAME]
 Read config/dns/zones.list, detect the Pi's Ethernet IPv4 address with ip,
 and generate the zone records and BIND settings. Back up, validate, and
 restart BIND. No package upgrades or FreeRADIUS changes.
+The ignored zones.list must exist. Every zone includes commented ise01-03 records.
 
   --interface NAME  Choose an Ethernet interface (otherwise auto-detected).
   --dry-run         Detect the address and preview generated files; no writes.
+  --check-zones     Validate the local zone list only (also works on your Mac).
   -h, --help        Show this help.
 
 Run this on the Pi with BIND9, bind9-utils, iproute2, and Python 3 installed.

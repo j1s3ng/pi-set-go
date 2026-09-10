@@ -118,7 +118,7 @@ if ! "$dns_only" && ! "$radsec_only"; then
 run python3 "$script_dir/scripts/configure-radius.py" "$script_dir/config/freeradius/users"
 fi
 if ! "$radius_only" && ! "$radsec_only"; then
-run python3 "$script_dir/scripts/configure-dns.py" "$script_dir/config/dns" "${dns_args[@]}"
+run bash "$script_dir/manage-dns.sh" "${dns_args[@]}"
 fi
 if ! "$radius_only" && ! "$dns_only"; then
 run python3 "$script_dir/scripts/configure-radsecproxy.py" "$script_dir/config/radsecproxy.conf"

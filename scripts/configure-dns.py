@@ -42,7 +42,9 @@ def select_address(addresses, routes, ethernet, interface=None):
 
 
 def domains_from(path):
-    values = path.read_text().splitlines() if path.exists() else ['super.local']
+    if not path.is_file():
+        raise ValueError(f'Missing local zone list: {path}. Copy examples/config/dns/zones.list into config/dns/zones.list and edit it first.')
+    values = path.read_text().splitlines()
     domains = []
     for value in values:
         value = value.split('#', 1)[0].strip().lower().rstrip('.')
@@ -81,14 +83,21 @@ def main():
     parser.add_argument('output', type=Path)
     parser.add_argument('--interface')
     parser.add_argument('--dry-run', action='store_true', help='Detect the Ethernet IP and preview files without writing')
+    parser.add_argument('--check-zones', action='store_true', help='Validate the local zone list only; no sudo or network required')
     args = parser.parse_args()
+    try:
+        domains = domains_from(args.output / 'zones.list')
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
+    if args.check_zones:
+        print(f'Local DNS zone list validated: {len(domains)} zones.')
+        return
     if not args.dry_run:
         if os.geteuid() != 0:
             parser.error('Run with sudo, or use --dry-run to preview on the Pi')
         for command in ('ip', 'named-checkzone', 'named-checkconf', 'systemctl'):
             if not shutil.which(command):
                 parser.error(f'Missing {command}; install the required packages on the Pi first')
-    domains = domains_from(args.output / 'zones.list')
     addresses = json.loads(subprocess.check_output(['ip', '-j', '-4', 'address', 'show']))
     routes = json.loads(subprocess.check_output(['ip', '-j', '-4', 'route', 'show', 'default']))
     # Physical Ethernet includes USB adapters; exclude Wi-Fi and virtual bridges/veth.

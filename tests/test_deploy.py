@@ -83,6 +83,8 @@ class DeploymentTests(unittest.TestCase):
             (root / 'config').mkdir()
             (root / 'setup.sh').write_text('#!/bin/sh\n')
             (root / 'config/radsecproxy.conf').write_text('private-config')
+            (root / 'config/dns').mkdir()
+            (root / 'config/dns/zones.list').write_text('private.test\n')
             (root / 'config/old.backup-123').write_text('old secret')
             (root / 'config/validation.log').write_text('log')
             (root / 'untracked.txt').write_text('untracked')
@@ -90,10 +92,11 @@ class DeploymentTests(unittest.TestCase):
             with patch.object(pack.subprocess, 'check_output', return_value=b'setup.sh\0'):
                 pack.package(root, archive)
             with tarfile.open(archive) as tar:
-                self.assertEqual(set(tar.getnames()), {'setup.sh', 'config', 'config/radsecproxy.conf'})
+                self.assertEqual(set(tar.getnames()), {'setup.sh', 'config', 'config/radsecproxy.conf', 'config/dns', 'config/dns/zones.list'})
                 self.assertEqual(tar.getmember('config').mode, 0o700)
                 self.assertEqual(tar.getmember('config/radsecproxy.conf').mode, 0o600)
                 self.assertEqual(tar.extractfile('config/radsecproxy.conf').read(), b'private-config')
+                self.assertEqual(tar.extractfile('config/dns/zones.list').read(), b'private.test\n')
 
     def test_archive_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as folder:

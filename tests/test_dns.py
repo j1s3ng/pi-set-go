@@ -41,7 +41,8 @@ class DnsTests(unittest.TestCase):
     def test_private_zone_list_and_validation(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'zones.list'
-            self.assertEqual(dns.domains_from(path), ['super.local'])
+            with self.assertRaises(ValueError):
+                dns.domains_from(path)
             path.write_text('super.local\nprivate.test # local only\n')
             self.assertEqual(dns.domains_from(path), ['super.local', 'private.test'])
             path.write_text('../escape\n')
@@ -55,9 +56,20 @@ class DnsTests(unittest.TestCase):
         for number in range(1, 4):
             self.assertIn(f'; ise0{number}.super.local. IN A 192.0.2.{10 + number}', zone)
 
+    def test_zone_preflight_needs_no_network_or_root(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / 'zones.list').write_text('super.local\nprivate.test\n')
+            with patch('sys.argv', ['configure-dns.py', directory, '--check-zones']), \
+                 patch.object(dns.os, 'geteuid', return_value=1000), \
+                 patch.object(dns.subprocess, 'check_output', side_effect=AssertionError('Preflight accessed the network')), \
+                 patch('sys.stdout', io.StringIO()) as output:
+                dns.main()
+            self.assertIn('2 zones', output.getvalue())
+
     def test_dry_run_reads_network_without_writing(self):
         output = io.StringIO()
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / 'zones.list').write_text('super.local\n')
             with patch('sys.argv', ['configure-dns.py', directory, '--dry-run']), \
                  patch.object(dns.subprocess, 'check_output', side_effect=[b'[]', b'[]']) as read_network, \
                  patch.object(dns.Path, 'iterdir', return_value=[]), \
