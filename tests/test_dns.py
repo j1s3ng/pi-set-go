@@ -3,6 +3,8 @@ import ipaddress
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+import io
 
 spec = importlib.util.spec_from_file_location('dns', Path(__file__).resolve().parents[1] / 'scripts/configure-dns.py')
 dns = importlib.util.module_from_spec(spec)
@@ -50,6 +52,23 @@ class DnsTests(unittest.TestCase):
         zone = dns.zone_text('super.local', ipaddress.IPv4Address('198.51.100.8'), 123)
         self.assertEqual(zone.count('IN A 198.51.100.8'), 2)
         self.assertIn('123 ; serial', zone)
+
+    def test_dry_run_reads_network_without_writing(self):
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('sys.argv', ['configure-dns.py', directory, '--dry-run']), \
+                 patch.object(dns.subprocess, 'check_output', side_effect=[b'[]', b'[]']) as read_network, \
+                 patch.object(dns.Path, 'iterdir', return_value=[]), \
+                 patch.object(dns, 'select_address', return_value=('eth0', ipaddress.IPv4Interface('192.0.2.10/24'))), \
+                 patch.object(dns.Path, 'write_text', side_effect=AssertionError('Dry run wrote a file')), \
+                 patch.object(dns.tempfile, 'mkdtemp', side_effect=AssertionError('Dry run created a backup')), \
+                 patch.object(dns.subprocess, 'run', side_effect=AssertionError('Dry run changed a service')), \
+                 patch('sys.stdout', output):
+                dns.main()
+        self.assertEqual(read_network.call_count, 2)
+        self.assertIn('Detected eth0: 192.0.2.10/24', output.getvalue())
+        self.assertIn('zone "super.local"', output.getvalue())
+        self.assertIn('IN A 192.0.2.10', output.getvalue())
 
 
 if __name__ == '__main__':

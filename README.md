@@ -55,6 +55,24 @@ restarts FreeRADIUS and BIND9 after configuration; it does not automatically reb
 
 ### DNS from the Ethernet address
 
+For standalone DNS management, run this **on the Pi**:
+
+```bash
+# Edit config/dns/zones.list: one domain per line is all you need.
+./manage-dns.sh --dry-run
+sudo ./manage-dns.sh
+# Optional explicit Ethernet adapter:
+sudo ./manage-dns.sh --interface eth0
+```
+
+This reads the Pi's own live network state, generates the zone records and BIND
+settings, validates them, and restarts BIND. It does not connect to a remote Pi
+or install packages. Install BIND9, bind9-utils, iproute2, and Python 3 first
+(the full setup script includes them). A dry run detects the real address and
+prints the proposed files without writing anything. Add or remove domains in
+the local zone list and rerun to update the served zones. Generated records and
+options are replaced on each run; no manual zone-file edits are needed.
+
 The normal setup also generates BIND9 DNS. To update DNS alone after an IP change:
 
 ```bash
