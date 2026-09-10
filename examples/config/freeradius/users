@@ -1,13 +1,107 @@
-# Example placeholder only. Add real FreeRADIUS user entries to
-# config/freeradius/users, which is ignored by Git.
-# Do not put real usernames or passwords in this example folder.
-# Uncomment and customize entries ONLY in your ignored config/freeradius/users.
-# Repeat for VLANs 1-6 with your own passwords in the ignored file.
+# FreeRADIUS 3 users: PEAP, MAB, and MAB + RADIUS PPSK.
+# Examples are disabled. Uncomment entire chosen entries only in config/freeradius/users.
+# Replace password placeholders and MAC addresses before enabling an entry.
+# Session-Timeout is in seconds. Leave its line commented for no per-user override.
+# Its trailing comma allows it to be enabled without changing other reply lines.
+# Airespace values are controller interface NAMES, not numeric VLAN attributes.
+# These examples assume interfaces named 1-6 map to VLANs 1-6.
+
+# avlan1 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Airespace-Interface-Name := "1"
+
+# avlan2 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Airespace-Interface-Name := "2"
+
+# avlan3 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Airespace-Interface-Name := "3"
+
+# avlan4 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Airespace-Interface-Name := "4"
+
+# avlan5 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Airespace-Interface-Name := "5"
+
+# avlan6 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Airespace-Interface-Name := "6"
+
 # tvlan1 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
 #     Tunnel-Type := VLAN,
 #     Tunnel-Medium-Type := IEEE-802,
 #     Tunnel-Private-Group-Id := "1"
-#
-# Airespace takes an interface NAME; match the controller's configured name.
-# avlan1 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+
+# tvlan2 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Tunnel-Type := VLAN,
+#     Tunnel-Medium-Type := IEEE-802,
+#     Tunnel-Private-Group-Id := "2"
+
+# tvlan3 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Tunnel-Type := VLAN,
+#     Tunnel-Medium-Type := IEEE-802,
+#     Tunnel-Private-Group-Id := "3"
+
+# tvlan4 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Tunnel-Type := VLAN,
+#     Tunnel-Medium-Type := IEEE-802,
+#     Tunnel-Private-Group-Id := "4"
+
+# tvlan5 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Tunnel-Type := VLAN,
+#     Tunnel-Medium-Type := IEEE-802,
+#     Tunnel-Private-Group-Id := "5"
+
+# tvlan6 Cleartext-Password := "REPLACE-WITH-A-UNIQUE-PASSWORD"
+#     # Session-Timeout := 3600,
+#     Tunnel-Type := VLAN,
+#     Tunnel-Medium-Type := IEEE-802,
+#     Tunnel-Private-Group-Id := "6"
+
+# BEGIN pi-set-go MAB examples
+# Disabled templates: remove ONE leading "# " from each line of a chosen entry.
+# The Session-Timeout line remains commented; enable it separately if needed.
+# Match the MAC username/password case and separators sent by your NAS.
+# Assumes the NAS sends the MAC as both username and password (PAP/CHAP).
+# MAB uses the outer/default server, not the PEAP inner tunnel.
+# MAB + RPPSK below uses Cisco iPSK Cisco-AVPair attributes.
+# The PSK is the device Wi-Fi key; the RADIUS password is its MAC.
+# Enable MAC authentication and, for RPPSK, RADIUS PSK support on the WLAN.
+
+# MAB only — Airespace interface 1
+# 020000000001 Cleartext-Password := "020000000001"
+#     # Session-Timeout := 3600,
 #     Airespace-Interface-Name := "1"
+
+# MAB only — tunnel VLAN 1
+# 020000000002 Cleartext-Password := "020000000002"
+#     # Session-Timeout := 3600,
+#     Tunnel-Type := VLAN,
+#     Tunnel-Medium-Type := IEEE-802,
+#     Tunnel-Private-Group-Id := "1"
+
+# MAB + RPPSK (Cisco iPSK) — Airespace interface 1
+# 020000000003 Cleartext-Password := "020000000003"
+#     # Session-Timeout := 3600,
+#     Cisco-AVPair += "psk-mode=ascii",
+#     Cisco-AVPair += "psk=REPLACE-WITH-8-TO-63-CHAR-PSK",
+#     Airespace-Interface-Name := "1"
+
+# MAB + RPPSK (Cisco iPSK) — tunnel VLAN 1
+# 020000000004 Cleartext-Password := "020000000004"
+#     # Session-Timeout := 3600,
+#     Cisco-AVPair += "psk-mode=ascii",
+#     Cisco-AVPair += "psk=REPLACE-WITH-8-TO-63-CHAR-PSK",
+#     Tunnel-Type := VLAN,
+#     Tunnel-Medium-Type := IEEE-802,
+#     Tunnel-Private-Group-Id := "1"
+
+# END pi-set-go MAB examples

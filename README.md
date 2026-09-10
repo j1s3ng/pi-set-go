@@ -69,6 +69,21 @@ Accounts `tvlan1` through `tvlan6` use `Tunnel-Type = VLAN`,
 clones receive commented examples. Configure AAA override/dynamic VLAN support
 on the AP/controller and provision the VLANs and trunks there as well.
 
+Both users files include commented MAB-only and MAB + RADIUS PPSK templates,
+each with Airespace and standard tunnel VLAN variants. The PPSK templates use
+[Cisco iPSK reply attributes](https://www.cisco.com/c/en/us/td/docs/wireless/controller/8-7/config-guide/b_cg87/m_wlan_security.html)
+(`Cisco-AVPair` for `psk-mode` and `psk`); other vendors may require different
+attributes. The MAB templates assume the NAS sends the device MAC as both
+username and password, with matching formatting; see the
+[FreeRADIUS MAC authentication guide](https://wiki.freeradius.org/guide/Mac-Auth).
+They use the outer/default server, so its `files` and PAP/CHAP handling must be
+enabled. These comments do not enable MAB or PPSK on the controller.
+
+Each account/template has an optional commented `Session-Timeout := 3600,`
+as its first reply attribute. To activate an example, remove one leading `# `
+from every line of its entry; the timeout remains commented until you enable
+it separately. Replace placeholder credentials and MAC addresses first.
+
 After editing local user assignments, apply them without another package upgrade:
 
 ```bash
