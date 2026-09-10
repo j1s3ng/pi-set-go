@@ -78,6 +78,10 @@ run apt-get "${apt_options[@]}" -o APT::Update::Error-Mode=any update
 # dist-upgrade is apt-get's equivalent of apt full-upgrade.
 run apt-get "${apt_options[@]}" dist-upgrade
 run apt-get "${apt_options[@]}" install freeradius freeradius-utils radsecproxy bind9 bind9-utils dnsutils python3 iproute2
+remote_args=(--dry-run)
+if ! "$dry_run"; then remote_args=(); fi
+if "$assume_yes"; then remote_args+=(--yes); fi
+run bash "$script_dir/setup-remote.sh" ${remote_args[@]+"${remote_args[@]}"}
 fi
 if ! "$dns_only"; then
 run python3 "$script_dir/scripts/configure-radius.py" "$script_dir/config/freeradius/users"

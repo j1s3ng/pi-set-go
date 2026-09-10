@@ -18,6 +18,52 @@ Raspberry Pi [recommends full-upgrade](https://www.raspberrypi.com/documentation
 
 ## Configure services
 
+### Headless boot, swap, and remote access
+
+The full setup also runs `setup-remote.sh`. It can be run independently:
+
+```bash
+./setup-remote.sh --dry-run
+sudo ./setup-remote.sh --yes
+```
+
+This installs and enables OpenSSH and [xrdp with xorgxrdp](https://github.com/neutrinolabs/xrdp),
+using a minimal Openbox desktop for remote sessions. FreeRDP is an RDP client
+option; xrdp provides the graphical login server needed here. Openbox keeps
+the session small for low-memory Pi boards. Right-click the remote desktop to
+open the applications menu and terminal. The RDP service starts at boot; the
+desktop session starts when you log in.
+
+SSH configuration is checked and its service is enabled before the local
+display manager is stopped. The default boot target becomes `multi-user.target`,
+so the local desktop stays off. SSH authentication policy is preserved. Connect
+your RDP client to the Pi on TCP 3389 and log in with an existing local account's
+password. Existing xrdp user-session overrides can supersede the configured
+Openbox startup script. SSH/SFTP and RDP are the configured remote access paths;
+other remote-access products are not enabled automatically.
+
+Swap is disabled persistently: fstab swap entries are commented out, legacy
+swap services are disabled, known swap units are masked, and zram settings are
+overridden. On Raspberry Pi OS Trixie, a drop-in sets `Mechanism=none` for
+[rpi-swap](https://github.com/raspberrypi/rpi-swap). **Reboot is required to finish
+disabling active swap.** The script leaves live swap in place until that reboot
+and does not reboot automatically. Backups of modified configuration and the
+previous default boot target are stored in `/var/backups/pi-set-go-remote-*`.
+
+After reboot, verify:
+
+```bash
+cat /proc/swaps  # Only the header should remain
+systemctl get-default  # multi-user.target
+systemctl is-enabled ssh xrdp
+systemctl is-active ssh xrdp xrdp-sesman
+```
+
+The script checks service state and displays TCP listeners. Firewall rules are
+preserved; confirm SSH and an actual RDP login from your client. It does not
+claim end-to-end access from service status alone. Stopping the display manager
+ends any local graphical session.
+
 Keep your real service files in `config/`. The entire directory and all its
 contents are ignored by Git. A tracked, placeholder-only layout lives in
 `examples/config/`; never add real credentials or private network data there.
