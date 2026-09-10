@@ -112,9 +112,13 @@ exec dbus-run-session -- openbox-session
     run('ss', '-lntp')
     print('SSH and xrdp enabled. RDP uses TCP 3389; log in with an existing local user password.')
     print('Openbox: right-click the desktop for the applications menu and terminal.')
-    print('Local desktop stopped. Swap disabling is pending reboot; current swap:')
-    print(Path('/proc/swaps').read_text())
-    print('Reboot when ready, then verify /proc/swaps has only its header.')
+    swaps = Path('/proc/swaps').read_text()
+    if len(swaps.splitlines()) > 1:
+        print('Local desktop stopped. Swap disabling is pending reboot; current swap:')
+        print(swaps)
+        print('Reboot when ready, then verify /proc/swaps has only its header.')
+    else:
+        print('Local desktop stopped. Swap is already inactive; persistent disable settings are installed.')
     print('Firewall reachability and an authenticated RDP desktop login must be tested from your client.')
 
 
