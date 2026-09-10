@@ -82,7 +82,12 @@ def main():
         # Validation output may include credentials; keep it in the private backup.
         with (backup / "validation.log").open("w") as log:
             subprocess.run(["freeradius", "-XC"], stdout=log, stderr=subprocess.STDOUT, check=True)
+        proxy_state = subprocess.check_output(
+            ["systemctl", "show", "radsecproxy", "-p", "LoadState", "--value"], text=True).strip()
+        if proxy_state not in ("", "not-found"):
+            subprocess.run(["systemctl", "disable", "--now", "radsecproxy"], check=True)
         subprocess.run(["systemctl", "restart", "freeradius"], check=True)
+        subprocess.run(["systemctl", "enable", "freeradius"], check=True)
         subprocess.run(["systemctl", "is-active", "--quiet", "freeradius"], check=True)
     except Exception:
         for link in created:

@@ -151,12 +151,20 @@ sudo ./pi-set-go.sh --radsec-only
 
 The deployer requires an actual local configuration; missing or comment-only
 files fail clearly. It backs up the installed file, validates a staged copy
-with `radsecproxy -p`, installs it with mode 640 and service-group access, then
-restarts and enables radsecproxy. On validation failure the installed file is
-untouched; on restart failure it restores the previous file. Backups and
+with `radsecproxy -p`, and installs it with mode 640 and service-group access.
+**radsecproxy stays stopped and disabled**, including in `--radsec-only` mode.
+FreeRADIUS is the preferred service and keeps UDP 1812/1813. Listener settings
+are preserved. On validation failure the installed file is untouched. Backups and
 potentially sensitive validation logs stay in a private
 `/var/backups/pi-set-go-radsec-*` directory. Referenced certificates, keys, and
 included files must already exist at the paths used in your configuration.
+
+During a full setup, a temporary runtime mask prevents APT from starting
+radsecproxy and taking FreeRADIUS's port. The mask is removed afterward while
+the proxy remains disabled. FreeRADIUS setup also stops/disables an installed
+proxy before restarting and enabling FreeRADIUS. To use radsecproxy later,
+first resolve overlapping listener addresses/ports or stop FreeRADIUS, then
+start the proxy explicitly.
 
 Package installers may start services automatically. The script validates and
 restarts FreeRADIUS and BIND9 after configuration; it does not automatically reboot.

@@ -74,6 +74,18 @@ run() {
   if ! "$dry_run"; then "$@"; fi
 }
 
+# Package post-install scripts may otherwise start radsecproxy on FreeRADIUS's port.
+proxy_mask_added=false
+release_proxy_mask() {
+  if "$proxy_mask_added"; then
+    # Keep the service disabled even if APT exits before normal configuration.
+    run systemctl disable --now radsecproxy || true
+    run systemctl unmask --runtime radsecproxy
+    proxy_mask_added=false
+  fi
+}
+trap 'setup_status=$?; release_proxy_mask; exit "$setup_status"' EXIT
+
 apt_options=(-o DPkg::Lock::Timeout=120)
 if "$assume_yes"; then
   export DEBIAN_FRONTEND=noninteractive
@@ -81,10 +93,19 @@ if "$assume_yes"; then
 fi
 
 if (( mode_count == 0 )); then
+if [[ ! -e /run/systemd/system/radsecproxy.service && ! -L /run/systemd/system/radsecproxy.service ]]; then
+  proxy_mask_added=true
+fi
+run systemctl mask --runtime --now radsecproxy
 run apt-get "${apt_options[@]}" -o APT::Update::Error-Mode=any update
 # dist-upgrade is apt-get's equivalent of apt full-upgrade.
 run apt-get "${apt_options[@]}" dist-upgrade
 run apt-get "${apt_options[@]}" install freeradius freeradius-utils radsecproxy bind9 bind9-utils dnsutils python3 iproute2 openssl
+if "$proxy_mask_added"; then
+  release_proxy_mask
+else
+  run systemctl disable --now radsecproxy
+fi
 remote_args=(--skip-update)
 if "$dry_run"; then remote_args+=(--dry-run); fi
 if "$assume_yes"; then remote_args+=(--yes); fi

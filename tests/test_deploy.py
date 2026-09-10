@@ -21,6 +21,13 @@ pack = load('package_deploy', 'package-deploy.py')
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_setup_prevents_proxy_start_during_apt(self):
+        script = Path(__file__).resolve().parents[1] / 'pi-set-go.sh'
+        output = subprocess.check_output(['bash', str(script), '--dry-run'], text=True)
+        self.assertLess(output.index('mask --runtime --now radsecproxy'), output.index('apt-get'))
+        self.assertLess(output.index('disable --now radsecproxy'), output.index('configure-radius.py'))
+        self.assertNotIn('1814', output)
+
     def test_missing_and_placeholder_config_fail(self):
         with tempfile.TemporaryDirectory() as folder:
             source = Path(folder) / 'source'
@@ -57,7 +64,8 @@ class DeploymentTests(unittest.TestCase):
                     radsec.deploy(source, target, root)
                     self.assertEqual(target.read_bytes(), source.read_bytes())
                     self.assertEqual(target.stat().st_mode & 0o777, 0o640)
-                    self.assertIn(['systemctl', 'enable', 'radsecproxy'], calls)
+                    self.assertIn(['systemctl', 'disable', '--now', 'radsecproxy'], calls)
+                    self.assertFalse(any(command[0] == 'systemctl' and command[1] in ('start', 'restart', 'enable') for command in calls))
                 self.assertEqual(list(root.glob('.pi-set-go-radsec-*')), [])
 
     def test_successful_deploy(self):
@@ -66,8 +74,8 @@ class DeploymentTests(unittest.TestCase):
     def test_invalid_config_keeps_installed_file(self):
         self.run_deployment('-p')
 
-    def test_failed_restart_restores_installed_file(self):
-        self.run_deployment('restart')
+    def test_failed_stop_keeps_installed_file(self):
+        self.run_deployment('disable')
 
     def test_private_archive_and_exclusions(self):
         with tempfile.TemporaryDirectory() as folder:
