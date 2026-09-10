@@ -68,6 +68,11 @@ def zone_text(domain, address, serial):
 @   IN NS ns1.{domain}.
 @   IN A {address}
 ns1 IN A {address}
+
+; ISE placeholders: replace the example IPs and uncomment to enable.
+; ise01.{domain}. IN A 192.0.2.11
+; ise02.{domain}. IN A 192.0.2.12
+; ise03.{domain}. IN A 192.0.2.13
 '''
 
 

@@ -93,6 +93,11 @@ to the ignored local list. Each zone gets SOA/NS records and A records for its
 root name and `ns1`, pointing at the detected IPv4 address. Zone serials advance
 on reruns. No wildcard or reverse zones are generated.
 
+Each zone also includes commented FQDN placeholders for `ise01`, `ise02`, and
+`ise03` (for example, `ise01.super.local.`), with example IPs `192.0.2.11`–`13`.
+They do not resolve until assigned real IPs and enabled. Manual changes to
+generated zone files are overwritten on regeneration.
+
 The helper preserves existing declarations in `/etc/bind/named.conf.local` and
 adds an include for `/etc/bind/pi-set-go/zones.conf`. It replaces
 `named.conf.options` with generated settings: listen on localhost and the

@@ -6,3 +6,8 @@ $TTL 300
 @   IN NS ns1.super.local.
 @   IN A 192.0.2.10
 ns1 IN A 192.0.2.10
+
+; ISE placeholders: replace the example IPs and uncomment to enable.
+; ise01.super.local. IN A 192.0.2.11
+; ise02.super.local. IN A 192.0.2.12
+; ise03.super.local. IN A 192.0.2.13

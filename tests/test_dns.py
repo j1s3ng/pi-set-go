@@ -52,6 +52,8 @@ class DnsTests(unittest.TestCase):
         zone = dns.zone_text('super.local', ipaddress.IPv4Address('198.51.100.8'), 123)
         self.assertEqual(zone.count('IN A 198.51.100.8'), 2)
         self.assertIn('123 ; serial', zone)
+        for number in range(1, 4):
+            self.assertIn(f'; ise0{number}.super.local. IN A 192.0.2.{10 + number}', zone)
 
     def test_dry_run_reads_network_without_writing(self):
         output = io.StringIO()
