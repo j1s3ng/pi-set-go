@@ -8,10 +8,12 @@ if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
 Usage: sudo ./manage-dns.sh [--interface NAME]
        ./manage-dns.sh --dry-run [--interface NAME]
 
-Read config/dns/zones.list, detect the Pi's Ethernet IPv4 address with ip,
-and generate the zone records and BIND settings. Back up, validate, and
+Read config/dns/zones.list, detect the Pi's Ethernet IPv4 address/subnet with ip,
+and generate forward/reverse zones, a trusted recursion ACL, and BIND settings.
+Use the reference's public forwarders (8.8.8.8 and 8.8.4.4). Back up, validate, and
 restart BIND. No package upgrades or FreeRADIUS changes.
-The ignored zones.list must exist. Every zone includes commented ise01-03 records.
+The ignored zones.list must exist. Every forward zone includes commented ise01-03 records.
+The Pi's reverse PTR uses ns1 under the first domain in zones.list.
 
   --interface NAME  Choose an Ethernet interface (otherwise auto-detected).
   --dry-run         Detect the address and preview generated files; no writes.

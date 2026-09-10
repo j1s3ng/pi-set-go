@@ -56,6 +56,62 @@ class DnsTests(unittest.TestCase):
         for number in range(1, 4):
             self.assertIn(f'; ise0{number}.super.local. IN A 192.0.2.{10 + number}', zone)
 
+    def test_options_use_detected_cidr_and_reference_forwarders(self):
+        address = ipaddress.IPv4Interface('198.51.100.130/25')
+        options = dns.options_text('enx001122334455', address)
+        self.assertIn('listen-on { 127.0.0.1; 198.51.100.130; };', options)
+        self.assertIn('198.51.100.128/25;', options)
+        self.assertNotIn('198.51.100.0/24', options)
+        self.assertIn('allow-recursion { trusted; };', options)
+        self.assertIn('allow-query-cache { trusted; };', options)
+        self.assertIn('allow-transfer { none; };', options)
+        self.assertIn('forwarders { 8.8.8.8; 8.8.4.4; };', options)
+
+    def test_reverse_authority_covers_exact_subnet_for_any_prefix(self):
+        for prefix in range(33):
+            with self.subTest(prefix=prefix):
+                network = ipaddress.IPv4Interface(f'192.0.2.130/{prefix}').network
+                zones = dns.reverse_networks(network)
+                self.assertLessEqual(len(zones), 128)
+                self.assertEqual(list(ipaddress.collapse_addresses(zones)), [network])
+                self.assertTrue(all(zone.prefixlen % 8 == 0 for zone in zones))
+
+    def test_reverse_ptr_owners_for_different_subnets(self):
+        for address, origin, owner in [
+            ('192.0.2.10/24', '2.0.192.in-addr.arpa', '10'),
+            ('198.51.100.10/16', '51.198.in-addr.arpa', '10.100'),
+            ('192.0.2.130/25', '130.2.0.192.in-addr.arpa', '@'),
+            ('192.0.2.130/32', '130.2.0.192.in-addr.arpa', '@'),
+        ]:
+            with self.subTest(address=address), tempfile.TemporaryDirectory() as directory:
+                zones = dns.generated_zones(['super.local', 'private.test'], ipaddress.IPv4Interface(address), Path(directory))
+                self.assertIn(f'{owner} IN PTR ns1.super.local.\n', zones[origin])
+                self.assertEqual(sum(text.count(' IN PTR ') for text in zones.values()), 1)
+                self.assertIn('private.test', zones)
+                self.assertIn('ise03.private.test.', zones['private.test'])
+
+    def test_regeneration_advances_serials_and_replaces_old_address_and_domains(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(dns.time, 'time', return_value=100):
+            managed = Path(directory)
+            old = dns.generated_zones(['super.local', 'old.test'], ipaddress.IPv4Interface('192.0.2.10/24'), managed)
+            for name, text in old.items():
+                (managed / f'db.{name}').write_text(text)
+            current = dns.generated_zones(['super.local'], ipaddress.IPv4Interface('192.0.2.20/24'), managed)
+            self.assertIn('101 ; serial', current['super.local'])
+            self.assertIn('101 ; serial', current['2.0.192.in-addr.arpa'])
+            self.assertIn('20 IN PTR ns1.super.local.', current['2.0.192.in-addr.arpa'])
+            self.assertNotIn('192.0.2.10', ''.join(current.values()))
+            self.assertNotIn('old.test', dns.zone_declarations(current, managed))
+            moved = dns.generated_zones(['super.local'], ipaddress.IPv4Interface('198.51.100.20/24'), managed)
+            self.assertNotIn('2.0.192.in-addr.arpa', dns.zone_declarations(moved, managed))
+            self.assertIn('100.51.198.in-addr.arpa', moved)
+
+    def test_private_list_cannot_override_generated_reverse_zone(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                dns.generated_zones(['super.local', '2.0.192.in-addr.arpa'],
+                                    ipaddress.IPv4Interface('192.0.2.10/24'), Path(directory))
+
     def test_zone_preflight_needs_no_network_or_root(self):
         with tempfile.TemporaryDirectory() as directory:
             (Path(directory) / 'zones.list').write_text('super.local\nprivate.test\n')
@@ -83,6 +139,9 @@ class DnsTests(unittest.TestCase):
         self.assertIn('Detected eth0: 192.0.2.10/24', output.getvalue())
         self.assertIn('zone "super.local"', output.getvalue())
         self.assertIn('IN A 192.0.2.10', output.getvalue())
+        self.assertIn('192.0.2.0/24;', output.getvalue())
+        self.assertIn('zone "2.0.192.in-addr.arpa"', output.getvalue())
+        self.assertIn('10 IN PTR ns1.super.local.', output.getvalue())
 
 
 if __name__ == '__main__':

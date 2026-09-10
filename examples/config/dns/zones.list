@@ -1,2 +1,3 @@
 # One DNS zone per line. Copy to config/dns/zones.list and add private zones there.
+# Reverse zones/subnet are detected on the Pi; its PTR uses ns1 under the first zone.
 super.local

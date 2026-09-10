@@ -1,2 +1,3 @@
-// Example placeholder for local BIND9 zone declarations.
-// Add your real declarations to config/dns/named.conf.local.
+// manage-dns.sh preserves existing declarations and adds this include on the Pi.
+// Domain names come from ignored config/dns/zones.list; reverse zones come from ip a.
+include "/etc/bind/pi-set-go/zones.conf";

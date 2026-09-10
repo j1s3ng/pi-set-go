@@ -225,6 +225,13 @@ prints the proposed files without writing anything. Add or remove domains in
 the local zone list and rerun to update the served zones. Generated records and
 options are replaced on each run; no manual zone-file edits are needed.
 
+The layout follows the primary-server portion of the
+[DigitalOcean BIND private-network guide](https://www.digitalocean.com/community/tutorials/how-to-configure-bind-as-a-private-network-dns-server-on-ubuntu-20-04):
+a trusted recursion ACL, public forwarders, forward and reverse zones, and BIND
+validation before restart. It is adapted for a single Raspberry Pi running
+Debian/Raspberry Pi OS. The Pi's live Ethernet address and ignored zone list
+replace the tutorial's example network and domains.
+
 The normal setup also generates BIND9 DNS. To update DNS alone after an IP change:
 
 ```bash
@@ -243,7 +250,17 @@ The full install includes `iproute2` and Python 3 for this helper.
 invalid list stops DNS deployment. The tracked example contains only `super.local`; add private domains
 to the ignored local list. Each zone gets SOA/NS records and A records for its
 root name and `ns1`, pointing at the detected IPv4 address. Zone serials advance
-on reruns. No wildcard or reverse zones are generated.
+on reruns. There are no wildcard records.
+
+Reverse zones are generated from the actual subnet prefix, with one PTR for the
+Pi pointing to `ns1.<first-domain-in-zones.list>`. For example, an Ethernet
+address of `192.0.2.10/24` creates `2.0.192.in-addr.arpa` with `10 IN PTR
+ns1.super.local.` when `super.local` is first in the list. A `/16` uses two
+reversed network octets. Subnets between octet boundaries are split into exact
+DNS zones: a `/23` produces two `/24` zones; a `/25` produces 128 host zones.
+This keeps reverse authority within the detected subnet and supports direct
+queries to the Pi without requiring upstream classless reverse delegation.
+These generated reverse names do not belong in `zones.list`.
 
 Each zone also includes commented FQDN placeholders for `ise01`, `ise02`, and
 `ise03` (for example, `ise01.super.local.`), with example IPs `192.0.2.11`–`13`.
@@ -254,7 +271,11 @@ The helper preserves existing declarations in `/etc/bind/named.conf.local` and
 adds an include for `/etc/bind/pi-set-go/zones.conf`. It replaces
 `named.conf.options` with generated settings: listen on localhost and the
 Ethernet IP, answer authoritative queries from any client that can reach it,
-and allow recursion only from localhost and the detected Ethernet subnet.
+and allow recursion/cache access through a `trusted` ACL containing loopback
+and the detected Ethernet subnet. It uses the guide's public forwarders,
+`8.8.8.8` and `8.8.4.4`, with `forward first` (fall back to recursive resolution
+if forwarding fails). Local zones are answered by the Pi. Transfers and dynamic
+updates are disabled; no secondary DNS server is assumed.
 Routed VLAN clients can query the local zones; additional recursion subnets
 require editing the options. Settings regenerate on every DNS run.
 
@@ -270,6 +291,7 @@ network. `.local` is reserved for [multicast DNS](https://www.rfc-editor.org/rfc
 clients may need explicit unicast DNS routing for these zones. Test BIND directly
 with `dig @<PI_ETHERNET_IP> super.local A`. DNS is regenerated when the script
 runs, not automatically on DHCP renewals; a DHCP reservation keeps the IP stable.
+Check the Pi's reverse record with `dig @<PI_ETHERNET_IP> -x <PI_ETHERNET_IP>`.
 
 ### PEAP and dynamic VLANs
 

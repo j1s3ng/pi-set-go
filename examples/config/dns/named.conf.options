@@ -1,2 +1,20 @@
-// Example placeholder for BIND9 listening, forwarding, and recursion settings.
-// Add your real options to config/dns/named.conf.options.
+// Layout example only; manage-dns.sh generates this from the Pi's Ethernet IP/subnet.
+// Edit config/dns/zones.list for domains; generated options are replaced on each run.
+acl "trusted" {
+    127.0.0.1;
+    192.0.2.0/24;
+};
+
+options {
+    directory "/var/cache/bind";
+    listen-on { 127.0.0.1; 192.0.2.10; };
+    listen-on-v6 { none; };
+    allow-query { any; };
+    recursion yes;
+    allow-recursion { trusted; };
+    allow-query-cache { trusted; };
+    allow-transfer { none; };
+    forward first;
+    forwarders { 8.8.8.8; 8.8.4.4; };
+    dnssec-validation auto;
+};

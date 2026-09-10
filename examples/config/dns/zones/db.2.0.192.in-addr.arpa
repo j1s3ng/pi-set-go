@@ -1,0 +1,7 @@
+; Layout example only; the script generates reverse zones from the Ethernet subnet.
+$TTL 300
+@ IN SOA ns1.super.local. hostmaster.super.local. (
+    1 ; serial
+    3600 900 604800 300 )
+@ IN NS ns1.super.local.
+10 IN PTR ns1.super.local.
