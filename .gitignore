@@ -4,3 +4,6 @@
 *.key
 *.pem
 *.log
+
+# Local service configuration, credentials, certificates, and DNS data.
+/config/

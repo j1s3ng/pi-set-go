@@ -1,0 +1,2 @@
+// Example placeholder for local BIND9 zone declarations.
+// Add your real declarations to config/dns/named.conf.local.

@@ -18,6 +18,33 @@ Raspberry Pi [recommends full-upgrade](https://www.raspberrypi.com/documentation
 
 ## Configure services
 
+Keep your real service files in `config/`. The entire directory and all its
+contents are ignored by Git. A tracked, placeholder-only layout lives in
+`examples/config/`; never add real credentials or private network data there.
+
+Create your local copy after cloning:
+
+```bash
+cp -Rn examples/config/. config/
+```
+
+The `-n` option preserves any files you already have. The layout is:
+
+```text
+config/                       # Everything here is ignored
+├── freeradius/
+│   └── users
+├── radsecproxy.conf
+└── dns/
+    ├── named.conf.local
+    ├── named.conf.options
+    └── zones/
+        └── db.example.test
+```
+
+These are placeholders showing file locations, not working service configurations.
+The setup script does not copy them into `/etc/` or apply them to services.
+
 This prepares the packages. Package installers may start services automatically; the script does not replace service configurations or automatically reboot.
 
 Before using the services, configure:

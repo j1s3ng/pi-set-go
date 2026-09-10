@@ -1,0 +1,2 @@
+// Example placeholder for BIND9 listening, forwarding, and recursion settings.
+// Add your real options to config/dns/named.conf.options.

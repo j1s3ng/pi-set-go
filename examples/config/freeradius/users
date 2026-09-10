@@ -1,0 +1,3 @@
+# Example placeholder only. Add real FreeRADIUS user entries to
+# config/freeradius/users, which is ignored by Git.
+# Do not put real usernames or passwords in this example folder.
