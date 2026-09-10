@@ -93,8 +93,49 @@ These are placeholders showing file locations, not working service configuration
 The setup script installs `config/freeradius/users` into
 `/etc/freeradius/3.0/mods-config/files/authorize` when it contains active entries,
 replacing that server file after backing it up. Comment-only files preserve the
-existing server users. DNS is generated and deployed as described below;
-radsecproxy files are not automatically deployed.
+existing server users. DNS is generated and deployed as described below.
+The full setup also deploys `config/radsecproxy.conf` to `/etc/radsecproxy.conf`.
+
+### Deploy ignored local configuration
+
+The local `config/` directory is the source for private service settings. Git
+does not transfer ignored files: copy this directory securely to the matching
+project directory on the Pi before running setup. The script locates it relative
+to itself, regardless of your current working directory.
+
+From your Mac, transfer the project and ignored settings over SSH:
+
+```bash
+./deploy-pi.sh pi@192.168.21.130
+# Transfer and run the full installation (prompts for sudo on the Pi):
+./deploy-pi.sh pi@192.168.21.130 --apply
+# Once radsecproxy is installed, transfer and apply only its config:
+./deploy-pi.sh pi@192.168.21.130 --apply --radsec-only
+```
+
+The destination is `~/pi-set-go`; use `--directory=NAME` for a different folder.
+The transfer contains Git-tracked working files and local `config/` contents,
+including private keys stored there, but excludes local backup/log files.
+It replaces matching destination files without deleting unrelated files.
+Private files have mode 600 and directories mode 700. Symlinks are rejected;
+use actual files under `config/`. Other untracked files are not transferred.
+The temporary transfer archive is private and removed afterward. No private
+config is added to Git. Without `--apply`, no services or packages are changed.
+
+To apply just radsecproxy after the package is installed:
+
+```bash
+sudo ./pi-set-go.sh --radsec-only
+```
+
+The deployer requires an actual local configuration; missing or comment-only
+files fail clearly. It backs up the installed file, validates a staged copy
+with `radsecproxy -p`, installs it with mode 640 and service-group access, then
+restarts and enables radsecproxy. On validation failure the installed file is
+untouched; on restart failure it restores the previous file. Backups and
+potentially sensitive validation logs stay in a private
+`/var/backups/pi-set-go-radsec-*` directory. Referenced certificates, keys, and
+included files must already exist at the paths used in your configuration.
 
 Package installers may start services automatically. The script validates and
 restarts FreeRADIUS and BIND9 after configuration; it does not automatically reboot.
