@@ -165,6 +165,57 @@ directory and runs `freeradius -XC` before restarting. Validation logs stay in
 that private backup because they may include credentials. On failure, modified
 files are restored; inspect the log and service status before restarting manually.
 
+### Append MAB prefixes and radsecproxy subnets
+
+Keep the original installed comments and configuration. These helpers append
+marked blocks at EOF and create a mode-600 backup beside the target file.
+They default to the ignored local files and do not restart services. Use
+`--file` to target an installed file directly. The attached/reference users
+file is not imported automatically.
+
+```bash
+# Add 256 MAC users ending in 00-ff, each assigned VLAN 3:
+./add-mab.sh '02:00:00:00:01:*' --vlan 3 --dry-run
+./add-mab.sh '02:00:00:00:01:*' --vlan 3
+# Controller interface names, MAC formatting, and timeout are optional choices:
+./add-mab.sh '02:00:00:00:02:*' --airespace vlan3 --format colon --uppercase --session-timeout 3600
+# Append directly to an installed users file, preserving its comments:
+sudo ./add-mab.sh '02:00:00:00:01:*' --vlan 3 --file /etc/freeradius/3.0/mods-config/files/authorize
+
+# Append an entire IPv4 client subnet; shared secret is prompted without echo:
+./add-radsec-subnet.sh 192.0.2.0/24 --dry-run
+./add-radsec-subnet.sh 192.0.2.0/24
+# Or read a secret from an ignored file:
+./add-radsec-subnet.sh 198.51.100.0/24 --secret-file config/radius.secret
+# TLS references a TLS block already defined earlier in the target config:
+./add-radsec-subnet.sh 192.0.2.0/24 --type TLS --tls trusted_clients --file /etc/radsecproxy.conf
+```
+
+Quote MAC wildcards to prevent shell expansion. A prefix consists of complete
+hexadecimal octets; an optional trailing `*` fills the remaining octets. Each
+generated MAB user's password equals its formatted MAC address. Match the NAS's
+case and separators with `--format plain|colon|hyphen|cisco` and `--uppercase`.
+Existing exact usernames are skipped, preserving their passwords and VLANs;
+rerunning does not modify those entries. Expansions larger than 65,536 addresses
+fail unless you explicitly raise `--max-entries` (a three-octet prefix is over
+16 million entries). Narrow the prefix for manageable files.
+
+FreeRADIUS processes users in order: an earlier matching entry without
+`Fall-Through` can prevent EOF entries from being reached. Review existing
+defaults if new users do not match; see the [users manual](https://www.freeradius.org/radiusd/man/users.html).
+The normal `--radius-only` setup still replaces its target users file from the
+local copy, so keep persistent additions in `config/freeradius/users` as well
+if you plan to rerun that setup.
+
+The subnet helper writes one [radsecproxy CIDR client block](https://radsecproxy.github.io/radsecproxy.conf.html)
+and rejects duplicate client names or identical CIDRs in the target file.
+Overlapping ranges and included files still need review because earlier
+clients take precedence. This adds a client source subnet, not upstream
+servers or realm routing. UDP/TCP secrets use radsecproxy's reversible hex
+encoding for exact handling of special characters; this is not encryption.
+Dry runs use a placeholder secret. TLS/DTLS keep certificate validation enabled
+and use the protocol default shared secret.
+
 Before using the services, configure:
 
 - FreeRADIUS: clients, shared secrets, and authentication under `/etc/freeradius/`.
