@@ -10,7 +10,18 @@ chmod +x pi-set-go.sh
 sudo ./pi-set-go.sh
 ```
 
-For unattended installation, use `sudo ./pi-set-go.sh --yes`. This accepts APT prompts and preserves locally modified package configuration files using the package manager's default action where available.
+Package installation is unattended by default; `-y`/`--yes` explicitly selects
+the same behavior. APT accepts prompts, debconf uses noninteractive defaults,
+and dpkg uses its default configuration-file action, keeping the existing file
+when no default is available. [apt-listchanges](https://manpages.debian.org/trixie/apt-listchanges/apt-listchanges.1.en.html)
+patch notes are skipped, so there is no pager waiting for `q`.
+[needrestart](https://manpages.debian.org/trixie/needrestart/needrestart.1.en.html)
+automatically restarts affected services after library updates. The script does
+not reboot automatically. These settings apply only to its APT commands.
+
+Use `sudo ./pi-set-go.sh --interactive` for normal package prompts and patch
+notes. `setup-remote.sh` supports the same options. SSH/sudo authentication and
+manual certificate generation still use their normal prompts.
 
 The script refreshes package lists, runs `apt-get dist-upgrade`, and installs `freeradius`, `freeradius-utils`, `radsecproxy`, `bind9`, `bind9-utils`, `dnsutils`, and `python3`. It then configures FreeRADIUS 3 for PEAP/MSCHAPv2 and dynamic VLAN replies. It stops on errors and can be rerun. Full upgrades may remove packages to resolve dependencies; review APT's proposal when running interactively.
 
@@ -130,11 +141,15 @@ From your Mac, transfer the project and ignored settings over SSH:
 ./deploy-pi.sh pi@192.168.21.130
 # Transfer and run the full installation (prompts for sudo on the Pi):
 ./deploy-pi.sh pi@192.168.21.130 --apply
+# Optional: restore package prompts and patch notes.
+./deploy-pi.sh pi@192.168.21.130 --apply --interactive
 # Once radsecproxy is installed, transfer and apply only its config:
 ./deploy-pi.sh pi@192.168.21.130 --apply --radsec-only
 ```
 
 The destination is `~/pi-set-go`; use `--directory=NAME` for a different folder.
+With `--apply`, package installation defaults to `--yes`; `-y`/`--yes` is also
+accepted explicitly and forwarded to setup. `--interactive` restores prompts.
 The transfer contains Git-tracked working files and local `config/` contents,
 including private keys stored there, but excludes local backup/log files.
 It replaces matching destination files without deleting unrelated files.

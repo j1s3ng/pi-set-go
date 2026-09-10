@@ -5,11 +5,14 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 target=''
 directory=pi-set-go
 apply=false
+package_mode=--yes
 mode=''
 dns_interface=''
 for arg in "$@"; do
   case "$arg" in
     --apply) apply=true ;;
+    -y|--yes) package_mode=--yes ;;
+    --interactive) package_mode=--interactive ;;
     --radius-only|--dns-only|--radsec-only)
       [[ -z "$mode" ]] || { echo 'Choose only one service-only option.' >&2; exit 2; }
       mode="$arg" ;;
@@ -18,6 +21,7 @@ for arg in "$@"; do
     -h|--help)
       cat <<'EOF'
 Usage: ./deploy-pi.sh USER@HOST [--directory=NAME] [--apply]
+                      [--yes | --interactive]
                       [--radius-only | --dns-only | --radsec-only]
                       [--dns-interface=NAME]
 
@@ -26,6 +30,8 @@ on the Pi. Existing files with matching names are replaced; other files remain.
 Private backup/log files are excluded. Nothing is committed or uploaded to Git.
 
   --apply          Run setup over SSH with an interactive sudo password prompt.
+  -y, --yes        Unattended packages; skip patch notes (default with --apply).
+  --interactive    Show normal package prompts and patch notes during setup.
   --radsec-only    With --apply, deploy to an already installed radsecproxy.
   --radius-only    With --apply, configure installed FreeRADIUS only.
   --dns-only       With --apply, run manage-dns.sh using the copied zones.list.
@@ -77,7 +83,7 @@ if "$apply"; then
   else
     dns_option=''
     if [[ -n "$dns_interface" ]]; then dns_option="--dns-interface=$dns_interface"; fi
-    ssh -t "$target" "cd \"\$HOME/$directory\" && sudo bash ./pi-set-go.sh $mode $dns_option"
+    ssh -t "$target" "cd \"\$HOME/$directory\" && sudo bash ./pi-set-go.sh $package_mode $mode $dns_option"
   fi
 else
   printf 'Files copied. Use --apply to run setup, or run sudo bash ~/%s/pi-set-go.sh on the Pi.\n' "$directory"

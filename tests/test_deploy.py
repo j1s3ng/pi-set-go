@@ -1,6 +1,7 @@
 import importlib.util
 import io
 from pathlib import Path
+import shlex
 import subprocess
 import tarfile
 import tempfile
@@ -21,6 +22,31 @@ pack = load('package_deploy', 'package-deploy.py')
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_package_prompts_and_notes_can_be_skipped_or_restored(self):
+        root = Path(__file__).resolve().parents[1]
+        for filename, count in [('pi-set-go.sh', 3), ('setup-remote.sh', 2)]:
+            for options in [[], ['-y'], ['--yes'], ['--interactive']]:
+                with self.subTest(script=filename, options=options):
+                    output = subprocess.check_output(
+                        ['bash', str(root / filename), '--dry-run', *options], text=True)
+                    commands = [shlex.split(line)[1:] for line in output.splitlines() if line.startswith('+')]
+                    apt = [command for command in commands if 'apt-get' in command]
+                    self.assertEqual(len(apt), count)
+                    unattended = options != ['--interactive']
+                    for command in apt:
+                        for option in ['-y', 'DEBIAN_FRONTEND=noninteractive',
+                                       'APT_LISTCHANGES_FRONTEND=none', 'NEEDRESTART_MODE=a',
+                                       'Dpkg::Options::=--force-confdef', 'Dpkg::Options::=--force-confold']:
+                            self.assertEqual(option in command, unattended)
+                    # APT-only settings must not leak into certificate/configuration helpers.
+                    for command in commands:
+                        if 'apt-get' not in command:
+                            self.assertFalse(any('DEBIAN_FRONTEND=' in arg for arg in command))
+                    if filename == 'pi-set-go.sh':
+                        remote = next(command for command in commands if str(root / 'setup-remote.sh') in command)
+                        self.assertIn('--yes' if unattended else '--interactive', remote)
+                        self.assertIn('--skip-update', remote)
+
     def test_setup_prevents_proxy_start_during_apt(self):
         script = Path(__file__).resolve().parents[1] / 'pi-set-go.sh'
         output = subprocess.check_output(['bash', str(script), '--dry-run'], text=True)
