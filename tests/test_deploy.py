@@ -24,7 +24,7 @@ pack = load('package_deploy', 'package-deploy.py')
 class DeploymentTests(unittest.TestCase):
     def test_package_prompts_and_notes_can_be_skipped_or_restored(self):
         root = Path(__file__).resolve().parents[1]
-        for filename, count in [('pi-set-go.sh', 3), ('setup-remote.sh', 2)]:
+        for filename, count in [('pi-set-go.sh', 3), ('setup-remote.sh', 4)]:
             for options in [[], ['-y'], ['--yes'], ['--interactive']]:
                 with self.subTest(script=filename, options=options):
                     output = subprocess.check_output(

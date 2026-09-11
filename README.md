@@ -1,6 +1,6 @@
 # pi-set-go
 
-Ready, set, network. A Raspberry Pi OS / Debian bootstrap script for FreeRADIUS, radsecproxy, and BIND9.
+Ready, set, network. A Raspberry Pi OS / Debian bootstrap script for FreeRADIUS, radsecproxy, BIND9, and remote access with SSH, xrdp, and Tailscale.
 
 ## Run on your Pi
 
@@ -71,8 +71,31 @@ display manager is stopped. The default boot target becomes `multi-user.target`,
 so the local desktop stays off. SSH authentication policy is preserved. Connect
 your RDP client to the Pi on TCP 3389 and log in with an existing local account's
 password. Existing xrdp user-session overrides can supersede the configured
-Openbox startup script. SSH/SFTP and RDP are the configured remote access paths;
-other remote-access products are not enabled automatically.
+Openbox startup script. Tailscale provides another path to SSH/SFTP and RDP
+after you connect the Pi to your tailnet.
+
+`setup-remote.sh` also installs Tailscale from its
+[official stable APT repository](https://pkgs.tailscale.com/stable/), selecting
+Debian or Raspbian and the release codename from `/etc/os-release`. It installs
+`curl` and CA certificates, stages the keyring and repository list before copying
+them into place, refreshes APT, installs `tailscale`, and enables/checks
+`tailscaled`. Package prompts follow the same `--yes`/`--interactive` setting.
+Service-only deployment modes skip this installation.
+
+Once setup completes, sign in on the Pi:
+
+```bash
+sudo tailscale up --accept-dns=false
+tailscale status
+tailscale ip -4
+```
+
+Open the printed login URL to connect it to your tailnet.
+[`--accept-dns=false`](https://tailscale.com/docs/reference/tailscale-cli/up)
+keeps the Pi's resolver configuration while it serves BIND DNS. Setup leaves
+existing Tailscale account/settings intact and does not run login automatically.
+Use the Tailscale IP for your existing SSH or RDP client, subject to your tailnet
+access rules. Tailscale SSH and subnet/exit-node routing are not enabled.
 
 Swap is disabled persistently: fstab swap entries are commented out, legacy
 swap services are disabled, known swap units are masked, and zram settings are
@@ -87,8 +110,8 @@ After reboot, verify:
 ```bash
 cat /proc/swaps  # Only the header should remain
 systemctl get-default  # multi-user.target
-systemctl is-enabled ssh xrdp
-systemctl is-active ssh xrdp xrdp-sesman
+systemctl is-enabled ssh xrdp tailscaled
+systemctl is-active ssh xrdp xrdp-sesman tailscaled
 ```
 
 The script checks service state and displays TCP listeners. Firewall rules are

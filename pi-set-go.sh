@@ -11,6 +11,7 @@ Usage: sudo ./pi-set-go.sh [--yes | --interactive] [--dry-run] [--radius-only | 
 Update APT, fully upgrade installed packages, then install FreeRADIUS,
 radsecproxy, and BIND9 with their command-line utilities.
 Configure FreeRADIUS PEAP/MSCHAPv2 with dynamic VLAN reply support.
+Install SSH, xrdp, and Tailscale remote access (Tailscale sign-in is separate).
 
   -y, --yes    Unattended packages: accept prompts and skip patch notes (default).
   --interactive Show normal package prompts and patch notes.
@@ -131,7 +132,7 @@ fi
 if "$dry_run"; then
   printf 'Preview complete; no changes made.\n'
 else
-  packages=(freeradius radsecproxy bind9)
+  packages=(freeradius radsecproxy bind9 tailscale)
   if "$radsec_only"; then packages=(radsecproxy); fi
   if "$radius_only"; then packages=(freeradius); fi
   if "$dns_only"; then packages=(bind9); fi
